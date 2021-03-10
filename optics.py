@@ -7,7 +7,6 @@ from numpy.fft import fftshift, ifftshift
 import fractions
 
 import cv2
-import matplotlib.pyplot as plt
 import os
 
 
