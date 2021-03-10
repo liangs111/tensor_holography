@@ -1,0 +1,9 @@
+name: tensorholo
+channels:
+  - defaults
+dependencies:
+  - numpy
+  - tensorflow-gpu=1.15
+  - pip:
+    - opencv-python
+

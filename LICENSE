@@ -1,0 +1,140 @@
+By downloading and using the Software, End User agrees to be bound by the Terms and Conditions of this Agreement.
+
+Evaluation & Testing Use Only Software Use Agreement
+
+The Tensor Holography Software (“Software”) enables the creation of real-time, photorealistic
+3D holography using deep learning. The Software consists of a large-scale 3D hologram
+dataset with 4000 RGB-D images and paired 3D computer generated holograms (CGHs). Using
+this photorealistic training dataset, a deep learning-based rendering system uses a convolution neural network to transform RGB-D input to a 3D hologram. The Software is being distributed for free, by the Massachusetts Institute of Technology (“MIT”), to the End User solely for review, testing and evaluation use.
+
+Absent your agreement to the terms below (the “Agreement”), you (the “End User”) have no
+right to access or use the Software whatsoever.
+
+MIT agrees to grant, hereunder, a non-exclusive license to End User for the use of the Software solely for End User’s review, testing, and/or internal evaluation, at End User’s institution or company on the following terms and conditions:
+
+1. NO REDISTRIBUTION. Software remains the property of MIT and End User shall not
+publish, distribute, or otherwise transfer or make available the Software to any other third
+party.
+
+2. NO COMMERCIAL USE. End User shall not use the Software for commercial purposes
+and any such use of the Software is expressly prohibited. Commercial purposes
+includes, but is not limited to, use of the Software in fee-for-service arrangements, core
+facilities or laboratories, to create or include within commercial products or services, or
+to provide research services to third parties for a fee. If End User wishes to use
+Software for commercial purposes, or for other purposes not anticipated herein, End
+User must execute a separate written license agreement with MIT.
+In order to request use of the Software for commercial purposes, or for other purposes
+not anticipated herein, please contact:
+MIT Technology Licensing Office
+255 Main Street
+Cambridge, MA 02142
+Tel.: 617-253-6966
+Email: software-licenses@mit.edu.
+
+3. OWNERSHIP AND COPYRIGHT NOTICE. This Agreement does not transfer any
+ownership of the Software to End User. As between MIT and End User, MIT owns all
+intellectual property in the Software. End User acknowledges that there may be third
+party code contained within the Software that may be governed by separate terms and
+conditions and End User agrees to comply with such separate terms and conditions. End
+User shall not remove or delete, and shall retain in the Software and any modifications to
+Software, the copyright, trademark, or other notices pertaining to the Software as are
+provided with the Software.
+
+4. FEEDBACK. In order to improve the Software, comments from End Users may be
+useful. End User agrees to provide MIT with feedback on the End User’s use of the
+Software (e.g., any bugs in the Software, the user experience. etc.) (collectively,
+“Feedback”). Feedback should be sent to: Liang Shi at liangs@mit.edu. MIT is
+permitted to use Feedback to make changes and improvements to the Software without
+any compensation or an accounting to End User.
+
+5. NON ASSERT. End User acknowledges that MIT may develop modifications to the
+Software that may be based on Feedback. MIT shall not be restricted in any way by End
+User regarding MIT's use of such Feedback. Further, End User acknowledges the right
+of MIT to prepare, publish, display, reproduce, transmit and or use modifications to the
+Software that may be substantially similar or functionally equivalent to End User’s
+modifications, and/or improvements to the Software, if any. End User agrees not to
+allege or enjoin copyright infringement against MIT, or any of its researchers, research
+staff, officers, directors, employees, MIT sponsors and MIT licensees or sublicensees,
+arising from the use of any derivative work of the Software. In the event that End User
+obtains patent protection for any modification or improvement to the Software, End User
+agrees not to allege or enjoin patent infringement of End User’s patent against MIT, or
+any of its researchers, research staff, officers, directors, employees, MIT sponsors and
+MIT licensees or sublicensees.
+
+6. PUBLICATION & ATTRIBUTION. End User has the right to publish, present, or share,
+results from the use of the Software. If utilization of the Software results in outcomes
+which will be published, End User shall acknowledge MIT as the provider and owner of
+the Software, shall specify the version of Software used, and include the following:
+
+“Copyright Notice and Disclaimer. The software [or “portions of the software”]
+incorporated herein is Tensor Holography Software, © MIT 2021 used with permission.
+All Rights Reserved.
+
+The name “MIT” (alone or as part of another name) or any logos, seals, insignia or other
+words, names, symbols or devices that identify MIT or any MIT school, unit, division or
+affiliate may not be used to endorse or promote products derived from this software
+without specific prior written permission.
+
+7. LIMITATION OF LIABILITY. IN NO EVENT SHALL MIT BE LIABLE TO ANY PARTY
+FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES,
+INCLUDING LOST PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE,
+EVEN IF MIT HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. MIT
+SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE. THE SOFTWARE PROVIDED HEREUNDER IS PROVIDED
+“AS IS”. MIT HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
+UPDATES, ENHANCEMENTS OR MODIFICATIONS.
+
+8. DATA AND OTHER INFORMATION SUPPLIED BY END USERS. Any data,
+communication or other information End User transmits to MIT will be deemed to be
+non-confidential and non-proprietary.
+
+9. NO WARRANTIES. THE SOFTWARE IS PROVIDED "AS IS." TO THE FULLEST
+EXTENT PERMITTED BY LAW, MIT HEREBY DISCLAIMS ALL WARRANTIES OF
+ANY KIND (EXPRESS, IMPLIED OR OTHERWISE) REGARDING THE SOFTWARE,
+INCLUDING BUT NOT LIMITED TO ANY IMPLIED WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OWNERSHIP, AND
+NON-INFRINGEMENT. MIT MAKES NO WARRANTY ABOUT THE ACCURACY,
+RELIABILITY, COMPLETENESS, TIMELINESS, SUFFICIENCY OR QUALITY OF THE
+SOFTWARE. MIT DOES NOT WARRANT THAT THE SOFTWARE WILL OPERATE
+WITHOUT ERROR OR INTERRUPTION, OR THAT THE SOFTWARE IS FREE OF
+COMPUTER VIRUSES OR OTHER HARMFUL MATERIALS.
+
+10. LIMITATIONS OF LIABILITY AND REMEDIES. USE OF THE SOFTWARE IS AT END
+USER’S OWN RISK. IF END USER IS DISSATISFIED WITH THE SOFTWARE, ITS
+EXCLUSIVE REMEDY IS TO STOP USING IT. IN NO EVENT SHALL MIT BE LIABLE
+TO END USER, IN CONTRACT, TORT OR OTHERWISE, FOR ANY DIRECT,
+INDIRECT, SPECIAL, INCIDENTAL, CONSEQUENTIAL, PUNITIVE OR OTHER
+DAMAGES OF ANY KIND WHATSOEVER ARISING OUT OF OR IN CONNECTION
+WITH THIS AGREEMENT AND THE SOFTWARE, OR USE OF THE SOFTWARE,
+EVEN IF MIT IS NEGLIGENT OR OTHERWISE AT FAULT, AND REGARDLESS OF
+WHETHER MIT IS ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+11. INDEMNIFICATION. To the fullest extent permitted by law, End User shall indemnify,
+defend and hold harmless MIT, its affiliates, current or future directors, trustees, officers,
+faculty, employees, students and agents and their respective successors, heirs and
+assigns (the "Indemnitees"), against any liability, damage, loss or expense (including
+reasonable attorney's fees and expenses of litigation) incurred by or imposed upon the
+Indemnitees or any one of them in connection with any claims, suits, actions, demands
+or judgments arising from End User’s use of the Software except to the extent directly
+caused by the gross negligence or willful misconduct of an Indemnitee.
+
+12. GOVERNING LAW. This Agreement and all disputes arising hereunder shall be
+construed and governed by the laws of the Commonwealth of Massachusetts regardless
+of otherwise applicable choice of law standards.
+
+13. NON-USE OF NAME. Nothing in this Agreement shall be construed as granting End
+User any right or license to use any MIT trademarks, service marks or logos. You may
+not use the term “Massachusetts Institute of Technology”, “MIT,” (or any variation,
+adaptation or abbreviation thereof) in any way that is inconsistent with the permitted
+uses described herein. You agree not to use any name or emblem of MIT or any of its
+subdivisions in any advertising or promotional materials, or to falsely suggest any
+relationship between End User and MIT, or in any manner that would infringe or violate
+any of MIT’s rights.
+
+14. MISCELLANEOUS. This Agreement represents the entire agreement between the
+Parties with respect to the subject matter hereof and supersedes all prior negotiations or
+discussions, whether written or oral. The failure of MIT to enforce at any time any of the
+provisions of the Agreement will in no way be construed to be a present or future waiver
+of such provisions, nor in any way affect the ability to enforce each and every such
+provision thereafter.
