@@ -2,6 +2,7 @@ name: tensorholo
 channels:
   - defaults
 dependencies:
+  - python=3.7
   - numpy
   - tensorflow-gpu=1.15
   - pip:
