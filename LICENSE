@@ -5,12 +5,17 @@ Evaluation & Testing Use Only Software Use Agreement
 The Tensor Holography Software (“Software”) enables the creation of real-time, photorealistic
 3D holography using deep learning. The Software consists of a large-scale 3D hologram
 dataset with 4000 RGB-D images and paired 3D computer generated holograms (CGHs). Using
-this photorealistic training dataset, a deep learning-based rendering system uses a convolution neural network to transform RGB-D input to a 3D hologram. The Software is being distributed for free, by the Massachusetts Institute of Technology (“MIT”), to the End User solely for review, testing and evaluation use.
+this photorealistic training dataset, a deep learning-based rendering system uses a 
+convolution neural network to transform RGB-D input to a 3D hologram. The Software is being 
+distributed for free, by the Massachusetts Institute of Technology (“MIT”), to the End User 
+solely for review, testing and evaluation use.
 
 Absent your agreement to the terms below (the “Agreement”), you (the “End User”) have no
 right to access or use the Software whatsoever.
 
-MIT agrees to grant, hereunder, a non-exclusive license to End User for the use of the Software solely for End User’s review, testing, and/or internal evaluation, at End User’s institution or company on the following terms and conditions:
+MIT agrees to grant, hereunder, a non-exclusive license to End User for the use of the 
+Software solely for End User’s review, testing, and/or internal evaluation, at End User’s 
+institution or company on the following terms and conditions:
 
 1. NO REDISTRIBUTION. Software remains the property of MIT and End User shall not
 publish, distribute, or otherwise transfer or make available the Software to any other third

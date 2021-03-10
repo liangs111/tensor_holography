@@ -3,7 +3,7 @@
 
 [Liang Shi](https://people.csail.mit.edu/liangs), [Beichen Li](https://www.linkedin.com/in/beichen-li-ba9b34106/), [Changil Kim](https://changilkim.com), [Petr Kellnhofer](https://kellnhofer.xyz), [Wojciech Matusik](https://cdfg.mit.edu/wojciech)
 
-This repository contains the code to reproduce the results presented in "Towards Real-time Photorealistic 3D Holography with Deep Neural Networks" Nature 2021.
+This repository contains the code to reproduce the results presented in "Towards Real-time Photorealistic 3D Holography with Deep Neural Networks" Nature 2021. **Please read the license before using the software.**
 
 ## Getting Started
 
