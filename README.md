@@ -59,11 +59,15 @@ If you find our work useful in your research, please cite:
 
 ```
 @article{Shi2021:TensorHolography,
-author = {L. Shi, B. Li, C. Kim, P. Kellnhofer, W. Matusik},
-title = {Towards Real-time Photorealistic 3D Holography with Deep Neural Networks},
-journal = {Nature},
-issue = {592},
-year = {2021},
+    title   = "Towards real-time photorealistic {3D} holography with deep neural
+                networks",
+    author  = "Shi, Liang and Li, Beichen and Kim, Changil and Kellnhofer, Petr
+                and Matusik, Wojciech",
+    journal = "Nature",
+    volume  =  591,
+    number  =  7849,
+    pages   = "234--239",
+    year    =  2021
 }
 ```
 
