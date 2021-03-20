@@ -14,7 +14,9 @@ conda env create -f environment.yml
 conda activate tensorholo
 ```
 
-After downloading the hologram dataset, place all subfolders (`/*_384`, `/*_192`) into `/data` directory. The dataset contains raw images and a tfrecord generated for each subfolder. The code by default loads the tfrecord for training, testing and validation.
+After downloading the hologram dataset, place all subfolders (`/*_384`, `/*_192`) into `/data` directory. The dataset contains raw images and a tfrecord generated for each subfolder. The code by default loads the tfrecord for training, testing and validation. 
+
+To ease experimental validation of the predicted hologram, the provided dataset is computed for a collimated frustum with a 3D volume that has a 6 mm optical path length. We recommend using a setup similar to [Maimone et al. 2017] Figure 10 (Right) to display the hologram. Users should feel free to choose the appropriate focal length of the collimating lens and imaging lens based on their lasers and applications. The dataset is computed for wavelengths at 450nm, 520nm, and 638nm. Mismatch of wavelengths may result in degraded experimental result.
 
 **The current codebase doesn't contain the training code. We will soon make it available in the second phase of release.** The current codebase does contain a pretrained CNN for 8um pitch SLMs and code snippet to evaluate the CNN performance on the validation set.
 
