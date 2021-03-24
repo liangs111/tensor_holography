@@ -343,19 +343,19 @@ if __name__ == '__main__':
     parser.add_argument('--eval-rgb-path', default=os.path.join(cur_dir, "data", "example_input", "couch_rgb.png"), help='Input rgb image path in evaluation mode')
     parser.add_argument('--eval-depth-path', default=os.path.join(cur_dir, "data", "example_input", "couch_depth.png"), help='Input depth image path in evaluation mode')
     parser.add_argument('--eval-output-path', default=os.path.join(cur_dir, "data", "example_input"), help='Output directory for results')
-    parser.add_argument('--eval-depth-shift', default=0, help='Depth shift (in mm) from the predicted midpoint hologram to the target hologram plane')
-    parser.add_argument('--gaussian-sigma', default=0.7, help='Sigma of Gaussian kernel used by AA-DPM')
+    parser.add_argument('--eval-depth-shift', default=0, type=float, help='Depth shift (in mm) from the predicted midpoint hologram to the target hologram plane')
+    parser.add_argument('--gaussian-sigma', default=0.7, type=float, help='Sigma of Gaussian kernel used by AA-DPM')
     parser.add_argument('--gaussian-width', default=3, type=int, help='Width of Gaussian kernel used by AA-DPM')
-    parser.add_argument('--phs-max', default=3.0, help='Maximum phase modulation of SLM in unit of pi')
+    parser.add_argument('--phs-max', default=3.0, type=float, help='Maximum phase modulation of SLM in unit of pi')
     parser.add_argument('--use-maimone-dpm', action='store_true', help='Use DPM of Maimone et al. 2017')
     
     # dataset parameters
-    parser.add_argument('--dataset-res', default=384, help='dataset image resolution')
-    parser.add_argument('--pitch', default=0.008, help='pixel pitch in mm')
+    parser.add_argument('--dataset-res', default=384, type=int, help='dataset image resolution')
+    parser.add_argument('--pitch', default=0.008, type=float, help='pixel pitch in mm')
 
     # model parameters
-    parser.add_argument('--num-filters-per-layer', default=24, help='Number of filters per layer')
-    parser.add_argument('--num-layers', default=30, help='Number layers')
+    parser.add_argument('--num-filters-per-layer', default=24, type=int, help='Number of filters per layer')
+    parser.add_argument('--num-layers', default=30, type=int, help='Number layers')
 
     # validation parameters
     parser.add_argument('--validate-mode', action='store_true', help='Run in validation mode')

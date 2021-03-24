@@ -42,16 +42,16 @@ python main.py --validate-mode
 python main.py --eval-mode
 ```
 with following options
-```
+``` python
 parser.add_argument('--eval-res-h', default=1080, type=int, help='Input image height in evaluation mode')
 parser.add_argument('--eval-res-w', default=1920, type=int, help='Input image width in evaluation mode')
 parser.add_argument('--eval-rgb-path', default=os.path.join(cur_dir, "data", "example_input", "couch_rgb.png"), help='Input rgb image path in evaluation mode')
 parser.add_argument('--eval-depth-path', default=os.path.join(cur_dir, "data", "example_input", "couch_depth.png"), help='Input depth image path in evaluation mode')
 parser.add_argument('--eval-output-path', default=os.path.join(cur_dir, "data", "example_input"), help='Output directory for results')
-parser.add_argument('--eval-depth-shift', default=0, help='Depth shift (in mm) from the predicted midpoint hologram to the target hologram plane')
-parser.add_argument('--gaussian-sigma', default=0.7, help='Sigma of Gaussian kernel used by AA-DPM')
+parser.add_argument('--eval-depth-shift', default=0, type=float, help='Depth shift (in mm) from the predicted midpoint hologram to the target hologram plane')
+parser.add_argument('--gaussian-sigma', default=0.7, type=float, help='Sigma of Gaussian kernel used by AA-DPM')
 parser.add_argument('--gaussian-width', default=3, type=int, help='Width of Gaussian kernel used by AA-DPM')
-parser.add_argument('--phs-max', default=3.0, help='Maximum phase modulation of SLM in unit of pi')
+parser.add_argument('--phs-max', default=3.0, type=float, help='Maximum phase modulation of SLM in unit of pi')
 parser.add_argument('--use-maimone-dpm', action='store_true', help='Use DPM of Maimone et al. 2017')
 ```
 
