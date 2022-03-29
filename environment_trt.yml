@@ -1,11 +1,12 @@
-name: tensorholo
+name: trt
 channels:
   - defaults
 dependencies:
   - python=3.8
   - pip:
-    - opencv-python
+    - protobuf 
     - onnx
+    - onnxruntime
     - tf2onnx
-    - numpy==1.18.5
-
+    - pycuda
+    - opencv-python

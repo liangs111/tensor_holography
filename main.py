@@ -202,6 +202,320 @@ class TensorHolographyModel():
         return train_handle, test_handle, validate_handle, handle, rgbd, holo_in, amp_in, phs_in, holo_out, amp_out, phs_out
 
 
+    def _get_loss(self,
+                  y_out,
+                  y_out_amp,
+                  y_out_phs,
+                  y_gt,
+                  y_gt_amp,
+                  y_gt_phs,
+                  rgbd,  
+                  propagator):
+        
+        # compute total variation 
+        def compute_tv_4d(field):
+            dx = field[:, :, :, 1:] - field[:, :, :, :-1]
+            dy = field[:, :, 1:, :] - field[:, :, :-1, :]
+            return dx, dy
+
+        # compute total variation loss
+        def compute_tv_loss(x_in, x_gt):
+            x_in_dx, x_in_dy   = compute_tv_4d(x_in)
+            x_out_dx, x_out_dy = compute_tv_4d(x_gt)
+            tv_loss = 0.5 * tf.reduce_mean(self.loss_params["loss_op"](labels=x_in_dx, predictions=x_out_dx)) + \
+                      0.5 * tf.reduce_mean(self.loss_params["loss_op"](labels=x_in_dy, predictions=x_out_dy))
+            return tv_loss
+        
+        # get depth dependent weight for the perceptual image
+        def get_depth_dependent_weight(depth, depth_to_focus, depth_diff_max):
+            depth_diff = (depth_diff_max - tf.abs(depth - depth_to_focus)) * self.training_params["depth_dependent_weight_scale"]
+            depth_weight = tf.exp(depth_diff)
+            # normalize weight to have max 1
+            depth_weight /= tf.reduce_max(depth_weight)
+            return depth_weight
+
+        # compute perceptual image loss at given depth
+        def get_img_diff_at_depth(y_out, y_gt, depth, depth_to_focus, depth_diff_max):
+            img_gt  = tf.abs(propagator(y_gt, -depth_to_focus))
+            img_out = tf.abs(propagator(y_out, -depth_to_focus))
+            depth_weight = get_depth_dependent_weight(depth, depth_to_focus, depth_diff_max)
+            weighted_img_gt = img_gt*depth_weight
+            weighted_img_out = img_out*depth_weight
+            img_loss = tf.reduce_mean(self.loss_params["loss_op"](weighted_img_gt, weighted_img_out))
+            tv_loss  = compute_tv_loss(weighted_img_gt, weighted_img_out)
+            return img_loss, tv_loss, img_gt, img_out
+
+        # split depth
+        depth = rgbd[:,3,:,:]
+
+        # compute depth to focus
+            # 1. compute histogram, pick top ["num_top_depth_for_img_loss"] depth bins
+            # 2. add random depth perturbations (smaller than a single bin width) to the top bins to avoid always optimizing for a particular depth
+            # 3. randomly select ["num_random_depth_for_img_loss"] depth in the rest of the bins and add offsets
+        for i in range(self.training_params["batch"]):
+            hist = tf.histogram_fixed_width(depth[i,:,:], 
+                                            value_range=(0, 1), 
+                                            nbins=self.training_params["num_hist_bins"])
+            idx = (tf.cast(tf.argsort(hist, direction="DESCENDING"), tf.float32) + tf.random.uniform([1], minval = 0, maxval=1.0)) / self.training_params["num_hist_bins"]
+            top_depth  = idx[:self.training_params["num_top_depth_for_img_loss"]]
+            rand_depth = tf.random.shuffle(idx[self.training_params["num_top_depth_for_img_loss"]:])[:self.training_params["num_random_depth_for_img_loss"]]
+            if not i:
+                # for the first element in batch, initialize depth_to_focus
+                depth_to_focus = tf.concat([top_depth, rand_depth], axis = 0)
+                depth_to_focus = depth_to_focus[None,:]
+            else:
+                # for following elements in batch, concat to depth_to_focus
+                tmp = tf.concat([top_depth, rand_depth], axis = 0)
+                tmp = tmp[None,:]
+                depth_to_focus = tf.concat([depth_to_focus, tmp], axis=0)
+
+        # scale depth, depth_to_focus, and add depth_base
+        depth = depth[:,None,:,:] * self.hologram_params["depth_scale"] + self.hologram_params["depth_base"]
+        depth_to_focus = depth_to_focus * self.hologram_params["depth_scale"] + self.hologram_params["depth_base"]
+
+        # compute hologram loss
+        y_gt_phs_scaled = (y_gt_phs-0.5) * 2.0 * np.pi
+        y_out_phs_scaled = (y_out_phs-0.5) * 2.0 * np.pi
+        phs_diff = tf.atan2(tf.sin(y_gt_phs_scaled - y_out_phs_scaled), tf.cos(y_gt_phs_scaled - y_out_phs_scaled))
+        phs_diff -= tf.reduce_mean(phs_diff, [2,3], keepdims=True) # subtract global phase offset per color channel
+        holo_loss = self.loss_params["loss_op"](y_gt_amp * tf.cos(phs_diff), y_out_amp) + \
+                    self.loss_params["loss_op"](y_gt_amp * tf.sin(phs_diff), 0.)
+        
+        # compute focal stack loss
+        fs_loss = 0.
+        fs_tv_loss = 0.
+        ssim_img_loss = 0.
+        psnr_img_loss = 0.
+        for i in range(self.training_params["batch"]):
+            # slice example from batch
+            depth_slice = depth[None,i,:,:,:]
+            y_out_slice = y_out[None,i,:,:,:]
+            y_gt_slice = y_gt[None,i,:,:,:]
+            # compute perceptual loss at given depth
+            for j in range(depth_to_focus.shape[1]):
+                tmp_img_loss, tmp_tv_loss, img_gt, img_out = get_img_diff_at_depth(y_out_slice, y_gt_slice, 
+                                                                   depth_slice, depth_to_focus[i,j], self.hologram_params["depth_scale"]
+                                                                   )
+                fs_loss += tmp_img_loss
+                fs_tv_loss += tmp_tv_loss
+                ssim_img_loss += tf.reduce_mean(tf.image.ssim(tf.transpose(img_gt, [0,2,3,1]), tf.transpose(img_out, [0,2,3,1]), 1.0))
+                psnr_img_loss += tf.reduce_mean(tf.image.psnr(tf.transpose(img_gt, [0,2,3,1]), tf.transpose(img_out, [0,2,3,1]), 1.0))
+    
+        normalize_scale = tf.cast(tf.size(depth_to_focus), dtype=tf.float32)
+
+        # normalize focal stack loss
+        fs_loss /= normalize_scale
+        fs_tv_loss /= normalize_scale
+
+        # compose final loss
+        loss = holo_loss   * self.loss_params["weight_holo"] + \
+               fs_loss     * self.loss_params["weight_fs"] + \
+               fs_tv_loss  * self.loss_params["weight_fs_tv"]
+
+        ssim_amp_loss = tf.reduce_mean(tf.image.ssim(tf.transpose(y_gt_amp, [0,2,3,1]), tf.transpose(y_out_amp, [0,2,3,1]), 1.0))
+        psnr_amp_loss = tf.reduce_mean(tf.image.psnr(tf.transpose(y_gt_amp, [0,2,3,1]), tf.transpose(y_out_amp, [0,2,3,1]), 1.0))
+        ssim_img_loss /= normalize_scale
+        psnr_img_loss /= normalize_scale
+
+        # output perceptual image at top histogram bins
+        return loss, ssim_amp_loss, ssim_img_loss, psnr_amp_loss, psnr_img_loss
+
+
+    def _setup_optimizer(self,
+                         starter_learning_rate,
+                         decay_type,
+                         decay_params,
+                         opt_type,
+                         opt_params,
+                         global_step):
+        """ Partially adapted from [Sitzmann et al. 2018]
+        """
+        if decay_type is not None:
+            if decay_type == 'polynomial':
+                learning_rate = tf.train.polynomial_decay(starter_learning_rate,
+                                                          global_step,
+                                                          **decay_params)
+        else:
+            learning_rate = starter_learning_rate
+
+        
+        opt_type = opt_type.lower()
+
+        if opt_type == 'adam':
+            optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate,
+                                               **opt_params)
+        elif opt_type == 'sgd_with_momentum':
+            optimizer = tf.train.MomentumOptimizer(learning_rate=learning_rate,
+                                                   **opt_params)
+        elif opt_type == 'adadelta':
+            optimizer = tf.train.AdadeltaOptimizer(learning_rate=learning_rate,
+                                                   **opt_params)
+        elif opt_type == 'rmsprop':
+            optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate,
+                                                  **opt_params)
+        else:
+            raise Exception('Unknown opt type')
+
+        return optimizer
+    
+
+    def train(self):
+        # setup training
+        train_handle, test_handle, _, handle, rgbd, holo_in, amp_in, phs_in, holo_out, amp_out, phs_out = self._setup_train()
+        
+        # create wave propagator
+        propagator = optics.tf_propagator(
+                (self.hologram_params["res_h"], self.hologram_params["res_w"]),
+                self.hologram_params["pitch"],
+                self.hologram_params["wavelengths"],
+                method="as",
+                double_pad=self.hologram_params["double_pad"]
+            )
+
+        # get loss
+        loss, ssim_amp_loss, ssim_img_loss, psnr_amp_loss, psnr_img_loss = self._get_loss(holo_out,
+                                                                                          amp_out,
+                                                                                          phs_out,
+                                                                                          holo_in,
+                                                                                          amp_in,
+                                                                                          phs_in,
+                                                                                          rgbd,  
+                                                                                          propagator)
+
+        # setup optimizer
+        global_step = tf.Variable(0, trainable=False)
+        optimizer = self._setup_optimizer(starter_learning_rate=self.training_params["learning_rate"],
+                                          decay_type=self.training_params["decay_type"],
+                                          decay_params=self.training_params["decay_params"],
+                                          opt_type=self.training_params["optimizer_type"],
+                                          opt_params=self.training_params["optimizer_params"],
+                                          global_step=global_step)
+        train_op = optimizer.minimize(loss=loss, global_step=global_step)
+
+        # create model saver
+        self.saver = tf.compat.v1.train.Saver(max_to_keep=5, save_relative_paths=True)
+
+        # initialize variables
+        init_op = tf.compat.v1.global_variables_initializer()
+        self.sess.run(init_op)
+
+        # restore trained model variable
+        last_epoch = 0
+        if self.training_params["restore_trained_model"]:
+            ckpt = tf.train.get_checkpoint_state(self.path_params["ckpt_parent_path"])
+            if ckpt and ckpt.model_checkpoint_path:
+                self.saver.restore(self.sess, tf.train.latest_checkpoint(self.path_params["ckpt_parent_path"]))
+                print("model restored from %s" % self.path_params["ckpt_parent_path"])
+                last_epoch = self.sess.run(global_step) / (self.train_dataset_params["sample_count"]/self.training_params["batch"])
+                last_epoch = int(last_epoch)
+                print("last training ends at epoch %d" % (last_epoch))
+            else:
+                print("INFO: NO RESTORED MODEL, RETRAIN FROM SCRATCH")
+        
+        # start training
+        print("Start the training!\n")
+        iter = 0
+        train_steps = self.train_dataset_params["sample_count"] // self.train_dataset_params["batch"]
+        test_steps = self.test_dataset_params["sample_count"] // self.test_dataset_params["batch"]
+
+        for epoch in range(last_epoch, self.training_params["num_epochs"]):
+            print("start epoch %d\n" % (epoch))
+            for t_step in range(train_steps):   
+                _, loss_val, ssim_amp_val, = self.sess.run([train_op,
+                                                            loss,
+                                                            ssim_amp_loss],
+                                                            feed_dict={handle: train_handle})
+
+                print("Epoch %d, Step %d, total_loss %0.8f, ssim amp loss %0.8f\n" % \
+                      (epoch, t_step, loss_val, ssim_amp_val))
+
+                if np.isnan(loss_val) or np.isnan(ssim_amp_val):
+                    print('Find nan in loss or prediction\n')
+                    raise
+
+                # test on validation dataset
+                if not iter % self.training_params["num_iter_per_test"] and iter > 0:
+                    avg_loss = []
+                    avg_ssim_amp_loss = []
+                    avg_ssim_img_loss = []
+                    avg_psnr_amp_loss = []
+                    avg_psnr_img_loss = []
+                    for v_step in range(test_steps):
+                        print("test step %d/%d\n" % (v_step, test_steps))
+                        data_loss_val, ssim_amp_loss_val, ssim_img_loss_val, psnr_amp_loss_val, psnr_img_loss_val = \
+                            self.sess.run([loss, ssim_amp_loss, ssim_img_loss, psnr_amp_loss, psnr_img_loss], 
+                                          feed_dict={handle: test_handle})
+                        avg_loss.append(data_loss_val)
+                        avg_ssim_amp_loss.append(ssim_amp_loss_val)
+                        avg_ssim_img_loss.append(ssim_img_loss_val)
+                        avg_psnr_amp_loss.append(psnr_amp_loss_val)
+                        avg_psnr_img_loss.append(psnr_img_loss_val)
+                        print('''test results at iter %d: average loss = %f,
+                                                ssim amp loss = %f, ssim img loss = %f,
+                                                psnr amp loss = %f, psnr img loss = %f,''' % 
+                            (iter, np.mean(avg_loss), 
+                            np.mean(avg_ssim_amp_loss), np.mean(avg_ssim_img_loss), 
+                            np.mean(avg_psnr_amp_loss), np.mean(avg_psnr_img_loss)))
+                iter = iter + 1
+        
+            # save model when one epoch finishes
+            print("Saving model at epoch %d ...\n" % (epoch))
+            self.saver.save(self.sess, self.path_params["ckpt_path"], global_step=global_step)
+
+        print("Finish the training\n")
+        print("Done!\n")
+
+    def export_for_tensorrt(self, trt_res_h, trt_res_w, data_format='NCHW'):
+        import onnx
+        import tf2onnx
+
+        # define placeholder for input rgbd images
+        if data_format == 'NCHW':
+            rgbd = tf.placeholder("float", [1, 
+                                            self.model_params["input_dim"], 
+                                            trt_res_h, 
+                                            trt_res_w], 
+                                  name="input")
+        else:
+            rgbd = tf.placeholder("float", [1, 
+                                            trt_res_h, 
+                                            trt_res_w, 
+                                            self.model_params["input_dim"]], 
+                                  name="input")
+
+        # build model
+        self.model_vars = self._build_model_vars()
+        self._build_graph(rgbd, self.model_vars, data_format=data_format)
+
+        # restore trained model variable
+        self.saver = tf.train.Saver(max_to_keep=5, save_relative_paths=True)
+        ckpt = tf.train.get_checkpoint_state(self.path_params["ckpt_parent_path"])
+        if ckpt and ckpt.model_checkpoint_path:
+            self.saver.restore(self.sess, tf.train.latest_checkpoint(self.path_params["ckpt_parent_path"]))
+            print("model restored from %s" % self.path_params["ckpt_parent_path"])
+        else:
+            raise Exception("ERROR: NO RESTORED MODEL...")
+        
+        # define input and output nodes
+        input_node_names = ["input:0"]     # Input nodes list
+        output_node_names = ["output_field_amp:0", "output_field_phs:0"]     # Output nodes list
+        output_node_names_no_zero = ["output_field_amp", "output_field_phs"] # Output nodes list without :0
+        
+         # freeze the graph
+        frozen_graph_def = tf.graph_util.convert_variables_to_constants(self.sess, 
+                                                                        self.sess.graph_def, 
+                                                                        output_node_names_no_zero)
+
+        # output to onnx
+        onnx_model, _ = tf2onnx.convert.from_graph_def(frozen_graph_def, 
+                                                       input_names=input_node_names, 
+                                                       output_names=output_node_names,
+                                                       )
+        
+        # save onnx model
+        onnx.save_model(onnx_model, '%s/%s.onnx' % (self.path_params["inference_graph_path"], 
+                                                    self.path_params["inference_graph_name"]))
+
     def validate(self):
         _, _, validate_handle, handle, rgbd, holo_in, amp_in, phs_in, holo_out, amp_out, phs_out = self._setup_train()
 
@@ -210,7 +524,7 @@ class TensorHolographyModel():
         psnr_amp_loss = tf.reduce_mean(tf.image.psnr(tf.transpose(amp_out, [0,2,3,1]), tf.transpose(amp_in, [0,2,3,1]), 1.0))
 
         # create model saver
-        self.saver = tf.compat.v1.train.Saver(max_to_keep=5)
+        self.saver = tf.compat.v1.train.Saver(max_to_keep=5, save_relative_paths=True)
 
         # initialize variables
         init_op = tf.compat.v1.global_variables_initializer()
@@ -223,7 +537,7 @@ class TensorHolographyModel():
                 self.saver.restore(self.sess, tf.train.latest_checkpoint(self.path_params["ckpt_parent_path"]))
                 print("model restored from %s" % self.path_params["ckpt_parent_path"])
             else:
-                print("ERROR: NO RESTORED MODEL...")
+                raise Exception("ERROR: NO RESTORED MODEL...")
 
         # test on validation dataset
         validate_steps = self.validate_dataset_params["sample_count"] // self.validate_dataset_params["batch"]
@@ -296,13 +610,13 @@ class TensorHolographyModel():
                                                 wavelength=self.hologram_params["wavelengths"])
 
         # restore pre-trained model
-        self.saver = tf.compat.v1.train.Saver(max_to_keep=5)
+        self.saver = tf.compat.v1.train.Saver(max_to_keep=5, save_relative_paths=True)
         ckpt = tf.train.get_checkpoint_state(self.path_params["ckpt_parent_path"])
         if ckpt and ckpt.model_checkpoint_path:
             self.saver.restore(self.sess, tf.train.latest_checkpoint(self.path_params["ckpt_parent_path"]))
             print("model restored from %s" % self.path_params["ckpt_parent_path"])
         else:
-            print("ERROR: NO RESTORED MODEL...")      
+            raise Exception("ERROR: NO RESTORED MODEL...") 
 
         # load input
         rgb   = np.transpose(cv2.resize(cv2.imread(eval_params['rgb_path']), 
@@ -333,6 +647,7 @@ class TensorHolographyModel():
         cv2.imwrite(os.path.join(eval_params["output_path"], "red.png"), phs_only_val[:,:,2] * 255.0)
 
 if __name__ == '__main__':
+    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
     cur_dir = os.path.dirname(os.path.realpath(__file__))
 
     parser = argparse.ArgumentParser()
@@ -359,7 +674,22 @@ if __name__ == '__main__':
 
     # validation parameters
     parser.add_argument('--validate-mode', action='store_true', help='Run in validation mode')
+    
+    # train parameters
+    parser.add_argument('--train-mode', action='store_true', help='Run in train mode')
+    parser.add_argument('--train-iters', default=1200, type=int, help='Training iterations')
 
+    # export parameters 
+    parser.add_argument('--export-mode', action='store_true', help='Export model for tensorrt optimization')
+    parser.add_argument('--trt-res-h', default=1080, type=int, help='Input image height in export (tensorrt) mode')
+    parser.add_argument('--trt-res-w', default=1920, type=int, help='Input image width in export (tensorrt) mode')
+    
+    # model name for running different modes
+    parser.add_argument('--model-name', default="full_loss", type=str, help='Model name')
+    
+    
+    # ** users can add their own input arguments, and replace the corresponding ones in the dicts**
+    
     opt = parser.parse_args()
 
     # fix random seed
@@ -380,14 +710,13 @@ if __name__ == '__main__':
     training_params = {
         "restore_trained_model": True,                             # flag to restore pre-trained model
         "batch" : 2,                                               # training batch 
-        "num_epochs": 1000,                                        # training epochs
+        "num_epochs": opt.train_iters,                             # training epochs
         "decay_type": None,                                        # learning rate decay
         "decay_params": None,                                      # learning decay parameters
         "learning_rate" : 1e-4,                                    # learning rate 
         "optimizer_type" : "adam",                                 # optimizer type 
         "optimizer_params" : 
             {"beta1":0.9, "beta2":0.99, "epsilon":1e-8},           # optimizer parameters                      
-        "num_iter_per_model_save": 1000,                           # number of iterations per model save
         "num_iter_per_test": 1000,                                 # number of iterations per validation
         "num_top_depth_for_img_loss": 15,                          # number of top-k depths for computing focal stack loss
         "num_random_depth_for_img_loss": 5,                        # number of random depths selected from rest of the bins
@@ -397,7 +726,7 @@ if __name__ == '__main__':
 
     # model parameters
     model_params = {
-        "name": "full_loss",                                       # model name
+        "name": opt.model_name,                                       # model name
         "input_dim": 4,                                            # RGBD
         "output_dim": 6,                                           # amplitude+phase
         "num_layers": opt.num_layers,                              # number of convolution layers
@@ -440,8 +769,8 @@ if __name__ == '__main__':
         "validate_source_paths": [os.path.join(validate_base_path, x) for x in labels], # path to validation set raw images
         "ckpt_path"            : os.path.join(checkpoint_base_path, "ckpt"),            # checkpoint path
         "ckpt_parent_path"     : checkpoint_base_path,                                  # checkpoint parent path 
-        "epoch_record_file"    : "epoch_record.txt",                                    # txt file that records how many epochs have been trained
-        "log_path"             : "logs",                                                # log file
+        "inference_graph_path" : checkpoint_base_path,                                  # inference graph path
+        "inference_graph_name" : "inference_graph",                                     # inference graph name
     }
     
     # training dataset parameters
@@ -493,8 +822,9 @@ if __name__ == '__main__':
                                               test_dataset_params=test_dataset_params,
                                               validate_dataset_params=validate_dataset_params)
     
-    # train model from scratch (will be available in the second release)
-    # tensor_holo_model.train()
+    # train model
+    if opt.train_mode:
+        tensor_holo_model.train()
     
     # validate pre-trained model 
     if opt.validate_mode:
@@ -518,3 +848,6 @@ if __name__ == '__main__':
             "amp_max": None,
         }
         tensor_holo_model.evaluate(eval_params)
+
+    if opt.export_mode:
+        tensor_holo_model.export_for_tensorrt(opt.trt_res_h, opt.trt_res_w)
