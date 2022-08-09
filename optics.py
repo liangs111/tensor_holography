@@ -228,6 +228,98 @@ def np_gaussian(shape=(3,3), sigma=0.5, reshape_4d=True):
     return h
 
 
+def tf_bldpm(cpx, 
+             propagator=None,
+             depth_shift=0,
+             adaptive_phs_shift=False,
+             batch=1, 
+             num_channels=3, 
+             res_h=384, 
+             res_w=384,
+             k=0.5,
+             phs_max=[2*np.pi]*3, 
+             amp_max=None, 
+             clamp=False,
+             normalize=True,
+             wavelength=[0.000450, 0.000520, 0.000638]):
+    """
+    Band-limited double phase method [Sui et al. 2021]
+    """
+    # make grid
+    square_filter = True
+    y = tf.range(-(res_h // 2), res_h // 2, delta=1)
+    x = tf.range(-(res_w // 2), res_w // 2, delta=1)
+    x, y = tf.meshgrid(x, y)
+    x = tf.stack([x]*3, axis=0)
+    y = tf.stack([y]*3, axis=0)
+    if square_filter:
+        side_min = np.minimum(res_w, res_h)
+        x = x[tf.newaxis,:,:,:] / side_min
+        y = y[tf.newaxis,:,:,:] / side_min
+
+    else:
+        x = x[tf.newaxis,:,:,:] / res_w
+        y = y[tf.newaxis,:,:,:] / res_h
+    
+    # Spatial frequency
+    tan_pi_alpha_u = tf.tan(y * np.pi)
+    tan_pi_alpha_mu = tf.tan(x * np.pi)
+    mask = (tf.abs(tan_pi_alpha_u*tan_pi_alpha_mu) <= k)
+    if square_filter:
+        mask_two = tf.logical_and(tf.abs(x) <= 0.5, tf.abs(y) <= 0.5)
+        mask = tf.logical_and(mask, mask_two)
+    mask = tf.cast(mask, cpx.dtype)
+
+    # shift the hologram to hologram plane
+    assert (depth_shift == 0 or propagator != None)
+    if depth_shift != 0:
+        tf_wavelength = tf.constant(np.array(wavelength).reshape(1,3,1,1))
+        cpx = propagator(cpx, depth_shift) * tf_compl_exp(-2*np.pi*depth_shift/tf_wavelength)
+
+    # filter the complex hologram in frequency space
+    cpx_fft = tf_fftshift2d(tf_fft2d(cpx)) * mask
+    cpx = tf_ifft2d(tf_ifftshift2d(cpx_fft))
+    amp = tf.abs(cpx)
+    phs = tf.math.angle(cpx)
+    
+    # normalize amplitude
+    if amp_max is None:
+        # avoid acos producing nan
+        amp_max = tf.reduce_max(amp) + 1e-6
+    amp = amp / amp_max
+
+    # clamp maximum value to 1.0
+    if clamp:
+        amp = tf.minimum(amp, 1.0-1e-6)
+
+    # center phase for each color channel
+    phs_zero_mean = phs - tf.reduce_mean(phs, [2,3], keepdims=True)
+
+    # compute two phase maps
+    phs_offset = tf.acos(amp)
+    phs_low = phs_zero_mean - phs_offset
+    phs_high = phs_zero_mean + phs_offset
+
+    # arrange in checkerboard pattern
+    phs_1_1 = phs_low[:,:,0::2,0::2]
+    phs_1_2 = phs_high[:,:,0::2,1::2]
+    phs_2_1 = phs_high[:,:,1::2,0::2]
+    phs_2_2 = phs_low[:,:,1::2,1::2]
+    phs_only = tf.concat([phs_1_1, phs_1_2, phs_2_1, phs_2_2], axis=1)
+    phs_only = tf.compat.v1.depth_to_space(phs_only, 2, data_format='NCHW')
+    
+    if phs_max != None:
+        phs_only = tf_wrap_phs(phs_only, phs_max=phs_max, adaptive_phs_shift=adaptive_phs_shift)
+
+    if normalize:
+        phs_max_4d = np.reshape(phs_max, [1,3,1,1])
+        phs_only = phs_only / phs_max_4d
+
+    # apply your own lookup table if necessary
+
+    return phs_only, amp_max
+
+
 def tf_aadpm(cpx, 
              propagator=None,
              depth_shift=0,
@@ -299,6 +391,70 @@ def tf_aadpm(cpx,
     # apply your own lookup table if necessary
 
     return phs_only, amp_max
+
+
+def np_circ_filter(batch,
+                   num_channels,
+                   res_h,
+                   res_w,
+                   filter_radius,
+                   ):
+    """create a circular low pass filter
+    """
+    y,x = np.meshgrid(np.linspace(-(res_w-1)/2, (res_w-1)/2, res_w), np.linspace(-(res_h-1)/2, (res_h-1)/2, res_h))
+    mask = x**2+y**2 <= filter_radius**2
+    np_filter = np.zeros((res_h, res_w))
+    np_filter[mask] = 1.0
+    np_filter = np.tile(np.reshape(np_filter, [1,1,res_h,res_w]), [batch, num_channels, 1, 1])
+    return np_filter
+
+
+def tf_filter_phs_only(phs_only,
+                       unnormalize_input=False,
+                       normalize_output=True,
+                       propagator=None, 
+                       depth_shift=0, 
+                       batch=2, 
+                       num_channels=3, 
+                       res_h=384, 
+                       res_w=384, 
+                       radius=None,
+                       phs_max=[2*np.pi]*3, 
+                       amp_max=1.0, 
+                       wavelength=[0.000450, 0.000520, 0.000638]):
+    """filter double-phase encoded phase-only hologram by modeling the physical aperture
+    """
+    # train mode
+    if radius == None:
+        radius = np.minimum(res_h, res_w) // 2
+
+    # turn phs_only to complex holograms
+    if unnormalize_input:
+        phs_max = np.array(phs_max).reshape(1,3,1,1)
+        phs_only = (phs_only-0.5) * phs_max
+    phs_only_cpx = tf_compl_val(tf.ones_like(phs_only), phs_only) * tf.cast(amp_max, tf.complex64)
+
+    # converts to fourier space and low-pass filter
+    phs_only_cpx_fft = tf_fftshift2d(tf_fft2d(phs_only_cpx), [batch, num_channels, res_h, res_w])
+    circ_filter = tf.convert_to_tensor(np_circ_filter(batch, num_channels, res_h, res_w, radius), dtype=tf.complex64)
+    phs_only_cpx_fft_filtered = phs_only_cpx_fft * circ_filter
+
+    # converts back to temporal domain
+    phs_only_cpx_filtered = tf_ifft2d(tf_ifftshift2d(phs_only_cpx_fft_filtered, [batch, num_channels, res_h, res_w]))
+
+    # propagate back to the center of the 3d volume
+    if depth_shift != 0:
+        tf_wavelength = tf.constant(np.array(wavelength).reshape(1,3,1,1))
+        phs_only_cpx_filtered = propagator(phs_only_cpx_filtered, depth_shift) * tf_compl_exp(2*np.pi*depth_shift/tf_wavelength)
+
+    # obtain amplitude and phs
+    amp_filtered = tf.abs(phs_only_cpx_filtered)
+    phs_filtered = tf.math.angle(phs_only_cpx_filtered)
+    if normalize_output:
+        phs_filtered = phs_filtered / 2.0 / np.pi + 0.5
+
+    return amp_filtered, phs_filtered
+
 
 
 class Propagation(abc.ABC):

@@ -148,6 +148,11 @@ if __name__ == '__main__':
     
     parser.add_argument('--benchmark-mode', action='store_true', help='Benchmark performance')
     
+    parser.add_argument('--v2', action='store_true', help='Use v2 model')
+    parser.add_argument('--active-max-ldi-layer', default=0, type=int, help='Active max LDI layer')
+    parser.add_argument('--activate-ddpm', action='store_true', help='Load ddpm network together with hologram rendering network; depth shift specified by --train-depth-shift')
+    parser.add_argument('--bypass-ddpm-network', action='store_true', help='Train/evaluate ddpm without using ddpm network (typical for 0 mm offset)')
+    
     parser.add_argument('--eval-mode', action='store_true', help='Benchmark performance')
     parser.add_argument('--eval-rgb-path', default=os.path.join(cur_dir, "data", "example_input", "couch_rgb.png"), help='Input rgb image path in evaluation mode')
     parser.add_argument('--eval-depth-path', default=os.path.join(cur_dir, "data", "example_input", "couch_depth.png"), help='Input depth image path in evaluation mode')
@@ -165,11 +170,22 @@ if __name__ == '__main__':
         "fp_16": opt.fp_16,                                        # half-precision float mode for the use of Tensor Cores
     }
     
+    postfix_model = "" if not opt.v2 else "_ldi_%d%s%s" % (
+        opt.active_max_ldi_layer,
+        "_ddpm_0" if opt.activate_ddpm else "",
+        "_bypass" if opt.bypass_ddpm_network else ""
+    )
+    
     trt_params["model_base_path"] = os.path.join(cur_dir, 'model', "ckpt_%s_pitch_%d_layers_%d_filters_%d" % 
-        (trt_params["name"], trt_params["pitch"]*1000, trt_params["num_layers"], trt_params["num_filters_per_layer"]))
-    trt_params["onnx_model_path"] = os.path.join(trt_params["model_base_path"], "inference_graph.onnx")
-    trt_params["trt_engine_path"] = os.path.join(trt_params["model_base_path"], "inference_graph%s.engine" % 
-                                                 ("_fp16" if opt.fp_16 else "_fp32"))
+        (trt_params["name"], 
+         trt_params["pitch"]*1000, 
+         trt_params["num_layers"], 
+         trt_params["num_filters_per_layer"]) + postfix_model)
+
+    postfix_onnx = "_v2" if opt.v2 else ""
+    trt_params["onnx_model_path"] = os.path.join(trt_params["model_base_path"], "inference_graph%s.onnx" % postfix_onnx)
+    trt_params["trt_engine_path"] = os.path.join(trt_params["model_base_path"], "inference_graph%s%s.engine" % 
+                                                 (postfix_onnx, "_fp16" if opt.fp_16 else "_fp32"))
     
     # build TensorRT engine
     trt_engine = TrtEngineOnnx(trt_params)

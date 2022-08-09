@@ -433,7 +433,7 @@ class TensorHolographyModel():
                     print('Find nan in loss or prediction\n')
                     raise
 
-                # test on validation dataset
+                # test on validation dataset (test handle)
                 if not iter % self.training_params["num_iter_per_test"] and iter > 0:
                     avg_loss = []
                     avg_ssim_amp_loss = []
@@ -539,7 +539,7 @@ class TensorHolographyModel():
             else:
                 raise Exception("ERROR: NO RESTORED MODEL...")
 
-        # test on validation dataset
+        # test on test dataset (validate handle)
         validate_steps = self.validate_dataset_params["sample_count"] // self.validate_dataset_params["batch"]
         avg_ssim_amp_loss = []
         avg_psnr_amp_loss = []
