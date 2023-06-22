@@ -1166,8 +1166,7 @@ if __name__ == '__main__':
         labels.append("img_" + str(i))
         labels.append("depth_" + str(i))
         
-    # train_base_path = os.path.join(cur_dir, "data", "train_%d_v2" % opt.dataset_res)
-    train_base_path = os.path.join("/data/ldi_dataset/train_%d_v2" % opt.dataset_res)
+    train_base_path = os.path.join(cur_dir, "data", "train_%d_v2" % opt.dataset_res)
     test_base_path = os.path.join(cur_dir, "data", "test_%d_v2" % opt.dataset_res)
     validate_base_path = os.path.join(cur_dir, "data", "validate_%d_v2" % opt.dataset_res)
     checkpoint_base_path = os.path.join(cur_dir, 'model', "ckpt_%s_pitch_%d_layers_%d_filters_%d_ldi_%d%s%s" % 

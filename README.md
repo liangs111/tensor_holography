@@ -2,16 +2,21 @@
 
 **Towards Real-time Photorealistic 3D Holography with Deep Neural Networks (TensorHolo V1)**\
 Nature 2021\
-[Project Page](http://cgh.csail.mit.edu)  | [Paper](https://dx.doi.org/10.1038/s41586-020-03152-0) | [Data](https://drive.google.com/drive/folders/1TYDNfrfkehAJiUpDLadjxJzjDdgvC-GT?usp=sharing)
+[Project Page](http://cgh.csail.mit.edu)  | [Paper](https://dx.doi.org/10.1038/s41586-020-03152-0) | [Data](https://drive.google.com/drive/folders/1TYDNfrfkehAJiUpDLadjxJzjDdgvC-GT?usp=sharing)\
 [Liang Shi](https://people.csail.mit.edu/liangs), [Beichen Li](https://www.linkedin.com/in/beichen-li-ba9b34106/), [Changil Kim](https://changilkim.com), [Petr Kellnhofer](https://kellnhofer.xyz), [Wojciech Matusik](https://cdfg.mit.edu/wojciech)
 
 **End-to-end Learning of 3D Phase-only Holograms for Holographic Display (TensorHolo V2)**\
 Light: Science and Applications 2022 [Impact factor: 20.26 (in 2022)]\
-[Project Page](http://cgh-v2.csail.mit.edu)  | [Paper](https://doi.org/10.1038/s41377-022-00894-6) | [Data](https://drive.google.com/drive/folders/1hlnk_yMjm2aebFillJFxFM1UaiI-INPg?usp=sharing)
+[Project Page](http://cgh-v2.csail.mit.edu)  | [Paper](https://doi.org/10.1038/s41377-022-00894-6) | [Data](https://drive.google.com/drive/folders/1hlnk_yMjm2aebFillJFxFM1UaiI-INPg?usp=sharing)\
 [Liang Shi](https://people.csail.mit.edu/liangs), [Beichen Li](https://www.linkedin.com/in/beichen-li-ba9b34106/), [Wojciech Matusik](https://cdfg.mit.edu/wojciech)
 
-
 This repository contains the code to reproduce the results presented in the above papers. **Please read the License before using the software.**
+
+## (New) Related Works 
+**Ergonomic-Centric Holography: Optimizing Realism, Immersion, and Comfort for Holographic Display**\
+Arxiv 2023\
+Project Page (in preparation)  | [Paper](http://arxiv.org/abs/2306.08138) | [Supplement](http://people.csail.mit.edu/liangs/papers/EC-H23_S.pdf) | Code (in preparation)\
+[Liang Shi*](https://people.csail.mit.edu/liangs), [DongHun Ryu*](https://sites.google.com/view/dhryu/), [Wojciech Matusik](https://cdfg.mit.edu/wojciech) (* indicates equal contribution)
 
 ## Getting Started
 **8/9/2022 Update: TensorHolo V2 code/dataset released.**
@@ -105,7 +110,17 @@ If you find our work useful in your research, please cite:
     month    =  aug,
     year     =  2022,
     language = "en"
-    } 
+} 
+```
+```
+@misc{Shi2023:EC-H,
+    title={Ergonomic-Centric Holography: Optimizing Realism,Immersion, and Comfort for Holographic Display}, 
+    author={Liang Shi and Donghun Ryu and Wojciech Matusik},
+    year={2023},
+    eprint={2306.08138},
+    archivePrefix={arXiv},
+    primaryClass={cs.GR}
+}
 ```
 
 ## License
