@@ -51,30 +51,37 @@ class TensorHolographyModel():
             
 
     def _build_model_vars(self):
-        fw   = np.full((self.model_params["num_layers"]), self.model_params["filter_width"], dtype=int)
-        fnum = np.append(np.full((self.model_params["num_layers"]-1), self.model_params["num_filters_per_layer"], dtype=int), 
-                         self.model_params["output_dim"]*(self.model_params["interleave_rate"]**2))
+        # Create dictionaries of filter widths and number of filters
+        fw = {i: self.model_params["filter_width"] for i in range(self.model_params["num_layers"])}
+        fnum = {i: self.model_params["num_filters_per_layer"] if i < self.model_params["num_layers"] - 1 else 
+               self.model_params["output_dim"] * (self.model_params["interleave_rate"]**2) for i in range(self.model_params["num_layers"])}
+        # Initialize model variables dictionary
         model_vars = {}
 
-        for i in range(self.model_params["num_layers"]):    
-            # first layer
-            if i==0:  
-                in_dim, out_dim = self.model_params["input_dim"] * (self.model_params["interleave_rate"]**2), fnum[i]
-            # last layer
-            elif i==self.model_params["num_layers"]-1:
-                in_dim, out_dim = fnum[i-1] + self.model_params["input_dim"] * (self.model_params["interleave_rate"]**2),  \
+        # Iterate through each layer
+        for i, (width, num_filters) in enumerate(zip(fw.values(), fnum.values())):    
+            # First layer
+            if i == 0:  
+                in_dim, out_dim = self.model_params["input_dim"] * (self.model_params["interleave_rate"]**2), num_filters
+            # Last layer
+            elif i == self.model_params["num_layers"]-1:
+                in_dim, out_dim = fnum[i-1] + self.model_params["input_dim"] * (self.model_params["interleave_rate"]**2), \
                                   self.model_params["output_dim"] * (self.model_params["interleave_rate"]**2)
+            # Intermediate layers
             else:
-                in_dim, out_dim = fnum[i-1], fnum[i]  
+                in_dim, out_dim = fnum[i-1], num_filters  
 
-            model_vars[i] = {'weights':tf_init_weights([fw[i], fw[i], in_dim, out_dim], 
-                                                        'xavier',
-                                                        xavier_params=(in_dim, out_dim),
-                                                        r=self.model_params["weight_var_scale"]),
-                            'bias':tf.Variable(tf.random.truncated_normal([out_dim],stddev=self.model_params["bias_stddev"]))
-                            }
+            # Initialize weights and biases for the current layer
+            model_vars[i] = {
+                'weights': tf_init_weights([width, width, in_dim, out_dim], 
+                                           'xavier',
+                                           xavier_params=(in_dim, out_dim),
+                                           r=self.model_params["weight_var_scale"]),
+                'bias': tf.Variable(tf.random.truncated_normal([out_dim], stddev=self.model_params["bias_stddev"]))
+            }
 
         return model_vars
+
 
 
     def _build_graph(self, x_in, model_vars, data_format='NCHW'):
